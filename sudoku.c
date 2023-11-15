@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#define PY_SSIZE_T_CLEAN
+#include <python3.10/Python.h>
 
 typedef unsigned char byte;
 
@@ -143,19 +145,22 @@ print_bits(byte byte0, byte byte1){
 	printf("  %X%X", byte0, byte1);
 }
 
-// NANDs the guess byte with each neighboring group of 8 tiles, in order to discern whether the given tile
-// is the ONLY tile in the nine that has a certain guess. If so, that's a hidden candidate and can be confirmed.
-
 byte
 get_hidden_single(Tile t){
+	// Not eligible for hidden single if it's already solved!
 	if(t.num){
 		return 0;
 	}
 
+	// Go through row, column and region modes for the get_neighbors function
 	for(byte i = 0; i < 3; i++){
 		Tile** neighbors = get_neighbors(t, i);
+
+		// Take the NOTs of the guess bytes. this is useful later.
 		byte gbyte0 = ~t.guesses[0];
 		byte gbyte1 = ~t.guesses[1];
+
+		// OR together the guess bytes with the guess bytes of everything else
 		for(byte j = 0; j < 9; j++){
 			Tile n = *(neighbors[j]);
 			if(t.id != n.id){
@@ -164,9 +169,57 @@ get_hidden_single(Tile t){
 			}
 		}
 
+		// If there is a zero bit in the guess bytes at this point, we've found a hidden single!
+
+		/*
+		EXAMPLE:
+
+		Consider this:
+
+			 1	  | 1    |
+			 4	  | 4 5  |  3
+			   8  |      |
+		    ------+------+------
+				  |		 |
+			   2  |   6  |  7
+				  |		 |
+			------+------+------
+			 1	  | 1	 | 1
+			 4	  | 4	 | 4
+			   8 9|     9|   8
+
+		...Denoting a region, where 3, 2, 6 and 6 are solved, and the top-left, top-middle, and all 3 bottom
+		tile are unclear and each have guesses remaining.
+
+		Notice that there is only a 5 in one tile.
+
+		Examine the guess bits, where we've NOT-ed the top middle tile:
+
+		TOP LEFT		0 1 0 0 0 1 0 0 1
+		[NOT] TOP MID   1 1 1 1 0 0 1 1 0	
+		TOP RIGHT		0 0 0 0 0 0 0 0 0
+		MID LEFT		0 0 0 0 0 0 0 0 0
+		MID				0 0 0 0 0 0 0 0 0
+		MID RIGHT		0 0 0 0 0 0 0 0 0
+		BOTTOM LEFT		1 1 0 0 0 1 0 0 1
+		BOTTOM MID		1 0 0 0 0 1 0 0 1
+		BOTTOM RIGHT	0 1 0 0 0 1 0 0 1
+
+		Now OR all of these bits together. What do we get?
+
+		COMPOSITE			1 1 1 1 0 1 1 1 1
+		[NOT] COMPOSITE		0 0 0 0 1 0 0 0 0
+
+		...And look! There's a 1-bit in the 5th slot! That means 5 is the hidden single!
+		(Same conclusion you'd reach from looking at the table above)
+		
+		*/
+
+		// Take the NOTs of the guess bytes again
 		gbyte0 = ~gbyte0;
 		gbyte1 = ~gbyte1;
 
+		// Return the hidden single, if it exists
 		if(ones(gbyte0, gbyte1) == 1){
 			return scan(gbyte0, gbyte1);
 		}
@@ -326,19 +379,28 @@ guess(){
 	byte guess_min = 9;
 
 	for(byte i = 0; i < 81; i++){
+		// Get a pointer to tile i
 		Tile* ti = board[i];
+
+		// Get ti's "ones"
 		byte tio = ones(ti->guesses[0], ti->guesses[1]);
+
+		// Loop to find minimum "ones" held by ANY tile.
+		// Statistically, a correct guess is most likely made on a tile with the least amount of possibilities.
 		if(tio && tio < guess_min){
 			guess_min = tio;
 		}
 		//printf("%d\n", guess_min);
 	}
 
+	// Find how many tiles have that same min guess count
 	byte min_tile_count = 0;
 
 	TLList TLL;
 	TLL.head = TLL.tail = NULL;
 
+	// Since we're not entirely sure at this point how many tiles share that minimum, it's a little faster
+	// if we append every eligible tile we find to a linked list without bounded length.
 	for(byte i = 0; i < 81; i++){
 		Tile* ti = board[i];
 		byte tio = ones(ti->guesses[0], ti->guesses[1]);
@@ -348,10 +410,15 @@ guess(){
 		}
 	}
 	
+	// Prepare for random number generation
 	srand(time(NULL));
 
+	// Get head of linked list
 	TLLNode* current = TLL.head;
 	// printf("MTC: %d\n", min_tile_count);
+
+	// Jump a random number of times through the linked list,
+	// effectively selecting a random tile with the min guess count
 	byte jumps = 0;
 	if(min_tile_count){
 		jumps = rand()%min_tile_count;
