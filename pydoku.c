@@ -16,9 +16,10 @@ typedef struct tile{
     byte* guesses;
 }Tile;
 
+PyObject* 	py_board = NULL;
 Tile** 		board;
 Tile**** 	tile_indices;
-byte solved_tiles = 0;
+byte 		solved_tiles = 0;
 
 // Do math on the tile's ID to find its neighbors from the indices
 // 0: neighboring row
@@ -286,7 +287,7 @@ initialize_board(){
 
 // Load a file (name given by fname) into the board structure.
 
-unsigned char
+byte
 load_board_from_file(char* fname){
 	initialize_board();
 
@@ -481,9 +482,11 @@ guess(){
 }
 
 static PyObject* method_initialize(PyObject* self, PyObject* args){
+	// Python argument parsing
+	
 	char* filename = NULL;
 
-	if(!PyArg_ParseTuple(args, "s", &filename)){
+	if(!PyArg_ParseTuple(args, "sO", &filename, &py_board)){
 		return NULL;
 	}
 
@@ -525,17 +528,55 @@ static PyObject* method_initialize(PyObject* self, PyObject* args){
         }
     }
 
-	return PyLong_FromLong(load_board_from_file(filename));
+	byte statcode = load_board_from_file(filename);
+
+	// Pack the board into some bytes to send to the Python frontend
+	char* board_txt = malloc(81);
+	for(byte i = 0; i < 81; i++){
+		board_txt[i] = board[i]->num + 48;
+	}
+
+	// Make a python bytes object
+	PyObject* py_bytes = PyBytes_FromStringAndSize(board_txt, 81);
+
+	// Free that buffer!
+	free(board_txt);
+
+	PyObject_SetAttrString(py_board, "boardbytes", py_bytes);
+
+	return PyLong_FromLong(statcode);
 }
 
 static PyObject* method_print(){
+
+	// Call the print void function on the C side
 	print_board();
 	return PyLong_FromLong(0);
+}
+
+static PyObject* method_step(){
+	// Pack the board into some bytes to send to the Python frontend
+	char* board_txt = malloc(81);
+	for(byte i = 0; i < 81; i++){
+		board_txt[i] = board[i]->num + 48;
+	}
+
+	// Make a python bytes object
+	PyObject* py_bytes = PyBytes_FromStringAndSize(board_txt, 81);
+
+	// Free that buffer!
+	free(board_txt);
+
+	// Return the status code from setting the object attribute to the bytes object
+	return PyLong_FromLong(
+		PyObject_SetAttrString(py_board, "boardbytes", py_bytes)
+	);
 }
 
 static PyMethodDef SudokuMethods[] = {
 	{"initialize", 	method_initialize, 	METH_VARARGS,	"Initialize board data structure"},
 	{"print",		method_print,		METH_VARARGS,	"Call C function for board printing"},
+	{"step",		method_step,		METH_VARARGS,	"Advance the Sudoku game, according to the C algorithm"},
 	{NULL, NULL, 0, NULL}
 };
 
