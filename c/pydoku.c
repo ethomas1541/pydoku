@@ -481,6 +481,14 @@ guess(){
 	return ctile;
 }
 
+PyObject* get_board_bytes_pyobj(){
+	char buf[81];
+	for(byte i = 0; i < 81; i++){
+		buf[i] = board[i] -> num + 48;
+	}
+	return PyBytes_FromStringAndSize(buf, 81);
+}
+
 static PyObject* method_initialize(PyObject* self, PyObject* args){
 	// Python argument parsing
 	
@@ -530,19 +538,7 @@ static PyObject* method_initialize(PyObject* self, PyObject* args){
 
 	byte statcode = load_board_from_file(filename);
 
-	// Pack the board into some bytes to send to the Python frontend
-	char* board_txt = malloc(81);
-	for(byte i = 0; i < 81; i++){
-		board_txt[i] = board[i]->num + 48;
-	}
-
-	// Make a python bytes object
-	PyObject* py_bytes = PyBytes_FromStringAndSize(board_txt, 81);
-
-	// Free that buffer!
-	free(board_txt);
-
-	PyObject_SetAttrString(py_board, "boardbytes", py_bytes);
+	PyObject_SetAttrString(py_board, "boardbytes", get_board_bytes_pyobj());
 
 	return PyLong_FromLong(statcode);
 }
@@ -555,21 +551,9 @@ static PyObject* method_print(){
 }
 
 static PyObject* method_step(){
-	// Pack the board into some bytes to send to the Python frontend
-	char* board_txt = malloc(81);
-	for(byte i = 0; i < 81; i++){
-		board_txt[i] = board[i]->num + 48;
-	}
-
-	// Make a python bytes object
-	PyObject* py_bytes = PyBytes_FromStringAndSize(board_txt, 81);
-
-	// Free that buffer!
-	free(board_txt);
-
-	// Return the status code from setting the object attribute to the bytes object
+	// Return a status code from setting the object attribute to the bytes object
 	return PyLong_FromLong(
-		PyObject_SetAttrString(py_board, "boardbytes", py_bytes)
+		PyObject_SetAttrString(py_board, "boardbytes", get_board_bytes_pyobj())
 	);
 }
 

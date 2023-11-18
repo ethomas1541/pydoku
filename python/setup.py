@@ -7,7 +7,7 @@ def main():
         description="Python interface to C-based Sudoku solving algorithm",
         author="Elijah Thomas",
         author_email="ethomas1541@gmail.com",
-        ext_modules=[Extension("Pydoku", ["pydoku.c"])]
+        ext_modules=[Extension("Pydoku", ["c/pydoku.c"])]
     )
 
 if __name__ == "__main__":

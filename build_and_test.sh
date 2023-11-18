@@ -1,4 +1,5 @@
-sudo python3 setup.py install;
+pwd;
+sudo python3 python/setup.py install;
 clear;
-python3 pytest.py;
+python3 python/pytest.py;
 rm -dr build;
