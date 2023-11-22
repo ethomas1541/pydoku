@@ -85,3 +85,11 @@ td{
 .g8{
     transform: translate(31px, 24px);
 }
+
+img{
+    display: block;
+    position: absolute;
+    margin-left: 50%;
+    transform: translate(-183px, 2px);
+    width: 363px;
+}

@@ -5,13 +5,14 @@
     </head>
     <body>
         <div class = "center">
+            <img src="static/img/grid_overlay.png" alt="">
             <table>
                 {% for x in range(9) %}
                 <tr>
                     {% for y in range(9) %}
                     <td class = "color_{{ (x * 9 + y) % 2 }}">
                         <div class = "inner" id = "tile_{{ x * 9 + y }}">
-                        
+                            1
                         </div>
                         {% for z in range(9) %}
                             <div class = "guess g{{z}}">
