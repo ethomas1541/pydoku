@@ -16,10 +16,16 @@ typedef struct tile{
     byte* guesses;
 }Tile;
 
+char* FNAME;
 PyObject* 	py_board = NULL;
 Tile** 		board;
 Tile**** 	tile_indices;
-byte 		solved_tiles = 0;
+byte 	progress = 0,
+		solved_tiles = 0,
+		single_candidate_count = 0, 
+		hidden_single_count = 0,
+		guess_count = 0,
+		solved_pre = 0;
 
 // Do math on the tile's ID to find its neighbors from the indices
 // 0: neighboring row
@@ -109,6 +115,7 @@ confirm(Tile* t, byte g){
     t->guesses[0] = 0;
     t->guesses[1] = 0;
 	solved_tiles++;
+	solved_pre++;
 }
 
 // Verify continuity with Sudoku rules
@@ -489,6 +496,27 @@ PyObject* get_board_bytes_pyobj(){
 	return PyBytes_FromStringAndSize(buf, 81);
 }
 
+PyObject* get_guess_string_pyobj(){
+	char buf[729];
+
+	for(byte i = 0; i < 81; i++){
+		byte g0 = board[i]->guesses[0];
+		byte g1 = board[i]->guesses[1];
+		for(char j = 0; j < 9; j++){
+			int bufidx = i * 9 + j;
+			if(!j){
+				// Scan the 9 guess bit
+				buf[bufidx] = (g0 & 1) + 48;
+			}else{
+				// Scan all other bits in the second guess byte - requires some iteration w/ j
+				buf[bufidx] = ((g1 >> (8 - j)) & 1) + 48; 
+			}
+		}
+	}
+
+	return PyBytes_FromStringAndSize(buf, 729);
+}
+
 static PyObject* method_initialize(PyObject* self, PyObject* args){
 	// Python argument parsing
 	
@@ -497,6 +525,9 @@ static PyObject* method_initialize(PyObject* self, PyObject* args){
 	if(!PyArg_ParseTuple(args, "sO", &filename, &py_board)){
 		return NULL;
 	}
+
+	FNAME = malloc(strlen(filename) + 1);
+	strcpy(FNAME, filename);
 
 	// HEAP ALLOCATION & SETUP
 
@@ -536,9 +567,11 @@ static PyObject* method_initialize(PyObject* self, PyObject* args){
         }
     }
 
-	byte statcode = load_board_from_file(filename);
+	printf("%s\n", FNAME);
+	byte statcode = load_board_from_file(FNAME);
 
 	PyObject_SetAttrString(py_board, "boardbytes", get_board_bytes_pyobj());
+	PyObject_SetAttrString(py_board, "guessbits", get_guess_string_pyobj());
 
 	return PyLong_FromLong(statcode);
 }
@@ -547,14 +580,52 @@ static PyObject* method_print(){
 
 	// Call the print void function on the C side
 	print_board();
+	// print_guesses();
 	return PyLong_FromLong(0);
 }
 
 static PyObject* method_step(){
 	// Return a status code from setting the object attribute to the bytes object
-	return PyLong_FromLong(
-		PyObject_SetAttrString(py_board, "boardbytes", get_board_bytes_pyobj())
-	);
+	progress = 0;
+	if(solved_tiles < 81){
+		for(byte i = 0; i < 81; i++){
+			Tile* tp = board[i];
+			Tile t = *tp;
+			byte a = t.guesses[0];
+			byte b = t.guesses[1];
+
+			// Single candidate tactic
+			if(ones(a, b) == 1){
+				confirm(tp, scan(a, b));
+				single_candidate_count++;
+				progress = 1;
+				break;
+			}
+
+			// Hidden single tactic
+			byte hs = get_hidden_single(t);
+			if(hs){
+				confirm(tp, hs);
+				hidden_single_count++;
+				progress = 1;
+				break;
+				}
+		}
+
+		if(!progress){
+			if(guess()){
+				guess_count++;
+			}else{
+				initialize_board();
+				load_board_from_file(FNAME);
+				single_candidate_count = hidden_single_count = guess_count = 0;
+			}
+		}
+			
+	}
+	PyObject_SetAttrString(py_board, "boardbytes", get_board_bytes_pyobj());
+	PyObject_SetAttrString(py_board, "guessbits", get_guess_string_pyobj());
+	return PyLong_FromLong(0);
 }
 
 static PyMethodDef SudokuMethods[] = {

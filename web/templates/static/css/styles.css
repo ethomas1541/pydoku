@@ -89,7 +89,12 @@ td{
 img{
     display: block;
     position: absolute;
-    margin-left: 50%;
+    margin-left: 49.95%;
     transform: translate(-183px, 2px);
-    width: 363px;
+    /* width: 363px; */
+}
+
+button{
+    display: block;
+    margin: 30px auto 0 auto
 }

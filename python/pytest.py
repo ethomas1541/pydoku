@@ -9,4 +9,5 @@ print(Board("badchar").status)
 
 print()
 
-print(Board("easy"))
+easyb = Board("easy")
+Pydoku.step()

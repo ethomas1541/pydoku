@@ -1,5 +1,5 @@
 pwd;
 sudo python3 python/setup.py install;
-clear;
+# clear;
 python3 python/pytest.py;
 rm -dr build;

@@ -1,19 +1,19 @@
 <!DOCTYPE html>
+
 <html>
     <head>
         <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}"/>
     </head>
     <body>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
         <div class = "center">
             <img src="static/img/grid_overlay.png" alt="">
             <table>
                 {% for x in range(9) %}
                 <tr>
                     {% for y in range(9) %}
-                    <td class = "color_{{ (x * 9 + y) % 2 }}">
-                        <div class = "inner" id = "tile_{{ x * 9 + y }}">
-                            1
-                        </div>
+                    <td class = "color_{{ (x * 9 + y) % 2 }}" id = "cell_{{ x * 9 + y }}">
+                        <div class = "inner" id = "tile_{{ x * 9 + y }}"></div>
                         {% for z in range(9) %}
                             <div class = "guess g{{z}}">
                                 {{z + 1}}
@@ -24,6 +24,44 @@
                 </tr>
                 {% endfor %}
             </table>
+            <button id = "advance">Advance</button>
         </div>
+        <script>
+            $("#advance").on("click", function(){
+                $.get("http://localhost:5000/_update_guesses").done(
+                    function(data){
+                        for(let i = 0; i < 81; i++){
+                            for(let j = 0; j < 9; j++){
+                                var k = i * 9 + j;
+                                if(data[k] == "0"){
+                                    $("#cell_" + i.toString()).find(".g" + (8 - j).toString()).text("")
+                                }else{
+                                    $("#cell_" + i.toString()).find(".g" + (8 - j).toString()).text(9 - j)
+                                }
+                            }
+                        }
+                    }
+                )
+                $.get("http://localhost:5000/_update_board").done(
+                    function(data){
+                        for(let i = 0; i < 81; i++){
+                            var di = data[i];
+                            var tile_id_str = "#tile_" + i.toString();
+                            if(di != "0"){
+                                $(tile_id_str).text(di);
+                                for(let j = 0; j < 9; j++){
+                                    $(".guessof" + i.toString()).text('');
+                                }
+                            }else{
+                                $(tile_id_str).text('');
+                            }
+                        }
+                    }
+                )
+            });
+            $(document).ready(function(){
+                $.post("/_initialize")
+            });
+        </script>
     </body>
 </html>
