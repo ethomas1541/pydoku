@@ -204,14 +204,14 @@ get_hidden_single(Tile t){
 		Examine the guess bits, where we've NOT-ed the top middle tile:
 
 		TOP LEFT		0 1 0 0 0 1 0 0 1
-		[NOT] TOP MID   1 1 1 1 0 0 1 1 0	
+		[NOT] TOP MID   	1 1 1 1 0 0 1 1 0	
 		TOP RIGHT		0 0 0 0 0 0 0 0 0
 		MID LEFT		0 0 0 0 0 0 0 0 0
-		MID				0 0 0 0 0 0 0 0 0
+		MID			0 0 0 0 0 0 0 0 0
 		MID RIGHT		0 0 0 0 0 0 0 0 0
 		BOTTOM LEFT		1 1 0 0 0 1 0 0 1
 		BOTTOM MID		1 0 0 0 0 1 0 0 1
-		BOTTOM RIGHT	0 1 0 0 0 1 0 0 1
+		BOTTOM RIGHT		0 1 0 0 0 1 0 0 1
 
 		Now OR all of these bits together. What do we get?
 
